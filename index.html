@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        class StarWars {
+            #list = [];
+
+            async #getRequest(url) {
+                const x = await fetch(url);
+                const res = await x.json();
+                return res;
+            }
+
+            async getStarshipsList() {
+                const page1 = await this.#getRequest('https://www.swapi.tech/api/starships');
+                const page2 = await this.#getRequest('https://www.swapi.tech/api/starships?page=2&limit=10');
+                const page3 = await this.#getRequest('https://www.swapi.tech/api/starships?page=3&limit=10');
+                const page4 = await this.#getRequest('https://www.swapi.tech/api/starships?page=4&limit=10');
+                this.#list = page1.results.concat(page2.results, page3.results, page4.results).map(x => {
+                    return {
+                        name: x.name,
+                        url: x.url,
+                    }
+                });
+                const ships = this.#list.map(el=> el.name);
+                return ships;
+            }
+            async #requestFilms() {
+                let filmList = []
+                const { result } = await this.#getRequest('https://www.swapi.tech/api/films');
+                filmList = result.map(x => {
+                    return {
+                        film: x.properties.title,
+                        starships: x.properties.starships
+                    }
+                })
+                return filmList;
+            }
+            async #getData() {
+                let films = await this.#requestFilms();
+                this.#list.map((listEl, index) => {
+                    listEl.films = [];
+                    films.forEach(({ film, starships }) => {
+                        starships.forEach(el => {
+                            if (el === listEl.url) {
+                                this.#list[index].films.push(film);
+                            }
+                        })
+                    })
+                })
+                return this.#list
+            }
+            async getFilms(ship) {
+                if (!this.#list[0].films) {
+                    const request = await this.#getData();
+                    const shipInFilms = request.find((el) => el.name === ship);
+                    return shipInFilms.films;
+                }
+                else {
+                    const index = this.#list.findIndex(({ name }) => ship === name);
+                    return this.#list[index].films;
+                }
+            }
+        }
+        const swapi = new StarWars();
+        swapi.getStarshipsList()
+            .then(console.log)
+            .then(() => swapi.getFilms('Star Destroyer'))
+            .then(console.log)
+            .then(() => swapi.getFilms('Sentinel-class landing craft'))
+            .then(console.log)
+            .then(() => swapi.getFilms('Y-wing'))
+            .then(console.log)
+            .then(() => swapi.getFilms('Millennium Falcon'))
+            .then(console.log)
+            .then(() => swapi.getFilms('TIE Advanced x1'))
+            .then(console.log)
+            .then(() => swapi.getFilms('Executor'))
+            .then(console.log)
+            .then(() => swapi.getFilms('X-wing'))
+            .then(console.log)
+            .then(() => swapi.getFilms('Rebel transport'))
+            .then(console.log)
+            .then(()=>swapi.getFilms('Trade Federation cruiser'))
+            .then(console.log)
+    </script>
+</body>
+
+</html>
