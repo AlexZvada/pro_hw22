@@ -19,42 +19,45 @@
                 return res;
             }
 
-            async getStarshipsList() {
-                const page1 = await this.#getRequest('https://www.swapi.tech/api/starships');
-                const page2 = await this.#getRequest('https://www.swapi.tech/api/starships?page=2&limit=10');
-                const page3 = await this.#getRequest('https://www.swapi.tech/api/starships?page=3&limit=10');
-                const page4 = await this.#getRequest('https://www.swapi.tech/api/starships?page=4&limit=10');
-                this.#list = page1.results.concat(page2.results, page3.results, page4.results).map(x => {
-                    return {
-                        name: x.name,
-                        url: x.url,
+            async getStarshipsList(url = null) {
+                if (!url) {
+                    url = 'https://www.swapi.tech/api/starships';
+                }
+                let page = await this.#getRequest(url);
+                this.#list = this.#list.concat(page.results.map(x => {
+                    return { 
+                        name : x.name,
+                        url: x.url 
                     }
-                });
-                const ships = this.#list.map(el=> el.name);
+                }));
+                if (page.next) {
+                    await this.getStarshipsList(page.next);
+                }
+                const ships = this.#list.map(el => el.name);
                 return ships;
             }
             async #requestFilms() {
-                let filmList = []
+                let filmList = {};
                 const { result } = await this.#getRequest('https://www.swapi.tech/api/films');
-                filmList = result.map(x => {
-                    return {
-                        film: x.properties.title,
-                        starships: x.properties.starships
-                    }
+                result.forEach(film => {
+                    film.properties.starships.forEach(ship => {
+                        if (!filmList[ship]) {
+                            filmList[ship] = [];
+                        }
+                        filmList[ship].push(film.properties.title);
+                    })
                 })
                 return filmList;
             }
             async #getData() {
-                let films = await this.#requestFilms();
-                this.#list.map((listEl, index) => {
-                    listEl.films = [];
-                    films.forEach(({ film, starships }) => {
-                        starships.forEach(el => {
-                            if (el === listEl.url) {
-                                this.#list[index].films.push(film);
-                            }
-                        })
-                    })
+                const films = await this.#requestFilms();
+                this.#list.map(el => {
+                    for (const key in films) {
+                        if (el.url === key) {
+                            el.films = films[key];
+                            return;
+                        }
+                    }
                 })
                 return this.#list
             }
@@ -89,7 +92,7 @@
             .then(console.log)
             .then(() => swapi.getFilms('Rebel transport'))
             .then(console.log)
-            .then(()=>swapi.getFilms('Trade Federation cruiser'))
+            .then(() => swapi.getFilms('Trade Federation cruiser'))
             .then(console.log)
     </script>
 </body>
